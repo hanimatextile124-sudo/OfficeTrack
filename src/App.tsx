@@ -49,6 +49,10 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
   const adminUid = import.meta.env.VITE_ADMIN_UID as string | undefined;
+  console.log("Admin UID check:", {
+  configured: Boolean(adminUid?.trim()),
+  length: adminUid?.trim().length ?? 0,
+});
 
   useEffect(() => {
     let mounted = true;
