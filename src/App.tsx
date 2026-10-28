@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "./supabase";
+import "./App.css";
 import {
   LayoutDashboard, Users, Clock, CalendarCheck, ClipboardList,
   FileChartColumn, Wallet, Plus, Search, Pencil, UserX
@@ -24,10 +25,10 @@ type AttendanceRecord = {
   overtime: number;
 };
 const shifts = [
-  { name: "Shift 1", time: "8:00 AM â€“ 8:00 PM", hours: "12 hours" },
-  { name: "Shift 2", time: "11:00 AM â€“ 7:00 PM", hours: "8 hours" },
-  { name: "Shift 3", time: "11:00 AM â€“ 9:00 PM", hours: "10 hours" },
-  { name: "Night Shift", time: "8:00 PM â€“ 8:00 AM next day", hours: "12 hours" }
+  { name: "Shift 1", time: "8:00 AM -“ 8:00 PM", hours: "12 hours" },
+  { name: "Shift 2", time: "11:00 AM -“ 7:00 PM", hours: "8 hours" },
+  { name: "Shift 3", time: "11:00 AM -“ 9:00 PM", hours: "10 hours" },
+  { name: "Night Shift", time: "8:00 PM -“ 8:00 AM next day", hours: "12 hours" }
 ];
 
 const menu = [
@@ -42,6 +43,7 @@ const menu = [
 
 export default function App() {
   const [page, setPage] = useState("Dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [adminUserId, setAdminUserId] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState("");
@@ -111,6 +113,51 @@ export default function App() {
 useEffect(() => {
   localStorage.setItem("officetrack_employees", JSON.stringify(employees));
 }, [employees]);
+
+const [employeesLoadedFromSupabase, setEmployeesLoadedFromSupabase] =
+  useState(false);
+
+useEffect(() => {
+  if (!authChecked || !adminUid || adminUserId !== adminUid) {
+    return;
+  }
+
+  let cancelled = false;
+
+  async function loadEmployeesFromSupabase() {
+    const { data, error } = await supabase
+      .from("employees")
+      .select("id, name, department, shift_id, monthly_salary, active")
+      .order("id");
+
+    if (cancelled) return;
+
+    if (error) {
+      console.error("Employees load failed:", error.message);
+      alert("Employees load nahi huay: " + error.message);
+      return;
+    }
+
+    const loadedEmployees: Employee[] = (data ?? []).map(row => ({
+      id: Number(row.id),
+      name: row.name ?? "",
+      department: row.department ?? "",
+     shift: shifts[Number(row.shift_id) - 1]?.name ?? "",
+      salary: Number(row.monthly_salary ?? 0),
+      active: Boolean(row.active)
+    }));
+
+    setEmployees(loadedEmployees);
+    setEmployeesLoadedFromSupabase(true);
+  }
+
+  void loadEmployeesFromSupabase();
+
+  return () => {
+    cancelled = true;
+  };
+}, [authChecked, adminUid, adminUserId]);
+
   const [search, setSearch] = useState("");
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
   try {
@@ -124,6 +171,87 @@ useEffect(() => {
 useEffect(() => {
   localStorage.setItem("officetrack_attendance", JSON.stringify(attendance));
 }, [attendance]);
+
+useEffect(() => {
+  if (!authChecked || !adminUid || adminUserId !== adminUid) {
+    return;
+  }
+
+  let cancelled = false;
+
+  async function testSupabaseEmployees() {
+    const { data, error } = await supabase
+      .from("employees")
+      .select("id, employee_code, name, department, shift_id, monthly_salary, active")
+      .limit(5);
+
+    if (cancelled) return;
+
+    if (error) {
+      console.error("Supabase employees read test failed:", error.message);
+    } else {
+      console.log(
+        "Supabase employees read test successful. Rows:",
+        data?.length ?? 0
+      );
+    }
+  }
+
+  void testSupabaseEmployees();
+
+  return () => {
+    cancelled = true;
+  };
+}, [authChecked, adminUid, adminUserId]);
+
+useEffect(() => {
+  if (!authChecked || !adminUid || adminUserId !== adminUid) {
+    return;
+  }
+
+  let cancelled = false;
+
+  async function loadAttendanceFromSupabase() {
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select(
+        "id, employee_id, attendance_date, status, in_time, out_time, overtime_minutes"
+      )
+      .order("attendance_date", { ascending: false });
+
+    if (cancelled) return;
+
+    if (error) {
+      console.error("Attendance load failed:", error.message);
+      alert("Attendance load nahi hui: " + error.message);
+      return;
+    }
+
+    const loadedAttendance: AttendanceRecord[] = (data ?? []).map(row => ({
+      id: Number(row.id),
+      employeeId: Number(row.employee_id),
+      date: row.attendance_date,
+      status: row.status ?? "",
+      inTime: row.in_time ?? "",
+      outTime: row.out_time ?? "",
+      overtime: Number(row.overtime_minutes ?? 0) / 60
+    }));
+
+    setAttendance(loadedAttendance);
+    console.log(
+      "Attendance Supabase se load ho gayi. Rows:",
+      loadedAttendance.length
+    );
+  }
+
+  void loadAttendanceFromSupabase();
+
+  return () => {
+    cancelled = true;
+  };
+}, [authChecked, adminUid, adminUserId]);
+
+
 
 const [attendanceForm, setAttendanceForm] = useState({
   employeeId: "",
@@ -164,27 +292,121 @@ const [attendanceForm, setAttendanceForm] = useState({
     setShowForm(true);
   }
 
-  function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (editing) {
-      setEmployees(old => old.map(e => e.id === editing.id
-        ? { ...e, ...form, salary: Number(form.salary) || 0 } : e));
-    } else {
-      setEmployees(old => [...old, {
-        id: old.reduce((max, e) => Math.max(max, e.id), 1000) + 1,
-        ...form, salary: Number(form.salary) || 0, active: true
-      }]);
-    }
-    setShowForm(false);
+  
+async function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+
+  const employeeData = {
+    name: form.name.trim(),
+    department: form.department,
+    shift_id: shifts.findIndex(s => s.name === form.shift) + 1,
+    monthly_salary: Number(form.salary) || 0,
+    active: true
+  };
+
+  if (!employeeData.name) {
+    alert("Employee ka naam enter karein.");
+    return;
   }
 
-  function deactivate(employee: Employee) {
-    if (window.confirm(`Deactivate ${employee.name}?`)) {
-      setEmployees(old => old.map(e =>
-        e.id === employee.id ? { ...e, active: false } : e
-      ));
+  if (editing) {
+    const { error } = await supabase
+      .from("employees")
+      .update({
+        name: employeeData.name,
+        department: employeeData.department,
+        shift_id: employeeData.shift_id,
+        monthly_salary: employeeData.monthly_salary
+      })
+      .eq("id", editing.id);
+
+    if (error) {
+      alert("Employee update nahi hua: " + error.message);
+      return;
     }
+
+    setEmployees(old =>
+      old.map(e =>
+        e.id === editing.id
+          ? { ...e, ...form, salary: employeeData.monthly_salary }
+          : e
+      )
+    );
+  } else {
+    const { data, error } = await supabase
+      .from("employees")
+      .insert({
+        employee_code: `EMP${Date.now()}`,
+        ...employeeData
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      alert("Employee save nahi hua: " + (error?.message ?? "Unknown error"));
+      return;
+    }
+
+    setEmployees(old => [
+      ...old,
+      {
+        id: Number(data.id),
+        ...form,
+        salary: employeeData.monthly_salary,
+        active: true
+      }
+    ]);
   }
+
+  setShowForm(false);
+}
+
+
+  
+
+async function deactivate(employee: Employee) {
+  const confirmed = window.confirm(
+    `PERMANENT DELETE: ${employee.name} aur uski tamam attendance delete ho jayegi. Kya aap sure hain?`
+  );
+
+  if (!confirmed) return;
+
+  // Pehle linked attendance delete karein
+  const { error: attendanceError } = await supabase
+    .from("attendance_records")
+    .delete()
+    .eq("employee_id", employee.id);
+
+  if (attendanceError) {
+    console.error("Attendance delete failed:", attendanceError.message);
+    alert("Attendance delete nahi hui: " + attendanceError.message);
+    return;
+  }
+
+  // Phir employee delete karein
+  const { error: employeeError } = await supabase
+    .from("employees")
+    .delete()
+    .eq("id", employee.id);
+
+  if (employeeError) {
+    console.error("Employee delete failed:", employeeError.message);
+    alert("Employee delete nahi hua: " + employeeError.message);
+    return;
+  }
+
+  setAttendance(old =>
+    old.filter(record => record.employeeId !== employee.id)
+  );
+
+  setEmployees(old =>
+    old.filter(e => e.id !== employee.id)
+  );
+
+  alert("Employee aur uski attendance permanently delete ho gayi.");
+}
+
+
 
 function calculateOvertime(
   shift: string,
@@ -445,7 +667,8 @@ function exportMonthlySalary() {
   alert("Monthly Salary Excel report download ho gayi.");
 }
 
-function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
+
+async function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
 
   if (!attendanceForm.employeeId) {
@@ -461,28 +684,59 @@ function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
       record.date === attendanceForm.date
   );
 
+  const overtime = calculateOvertime(
+    employees.find((e: Employee) => e.id === employeeId)?.shift ?? "",
+    attendanceForm.outTime,
+    attendanceForm.status
+  );
+
+  const { data: savedRow, error } = await supabase
+    .from("attendance_records")
+    .upsert(
+      {
+        ...(existing ? { id: existing.id } : {}),
+        employee_id: employeeId,
+        attendance_date: attendanceForm.date,
+        status: attendanceForm.status,
+        in_time: attendanceForm.inTime || null,
+        out_time: attendanceForm.outTime || null,
+        overtime_minutes: Math.round(overtime * 60)
+      },
+      { onConflict: "id" }
+    )
+    .select("id")
+    .single();
+
+  if (error || !savedRow) {
+    console.error("Attendance save failed:", error?.message);
+    alert(
+      "Attendance database mein save nahi hui: " +
+      (error?.message ?? "Unknown error")
+    );
+    return;
+  }
+
   const record: AttendanceRecord = {
-    id: existing?.id ?? Date.now(),
+    id: savedRow.id,
     employeeId,
     date: attendanceForm.date,
     status: attendanceForm.status,
     inTime: attendanceForm.inTime,
     outTime: attendanceForm.outTime,
-    overtime: calculateOvertime(
-  employees.find((e: Employee) => e.id === employeeId)?.shift ?? "",
-  attendanceForm.outTime,
-  attendanceForm.status
-)
+    overtime
   };
 
   setAttendance(old =>
     existing
-      ? old.map(item => item.id === existing.id ? record : item)
+      ? old.map(item =>
+          item.id === existing.id ? record : item
+        )
       : [...old, record]
   );
 
-  alert("Attendance saved successfully.");
+  alert("Attendance successfully saved to Supabase.");
 }
+
   if (!authChecked) {
     return <div className="content"><p>OfficeTrack login check ho raha hai...</p></div>;
   }
@@ -517,8 +771,17 @@ function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
   }
 
   return <div className="app">
-    <aside className="sidebar">
-      <h2>â—ˆ OfficeTrack</h2>
+    <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+      <button
+  type="button"
+  className="sidebar-toggle"
+  onClick={() => setSidebarOpen(!sidebarOpen)}
+  aria-label="Toggle sidebar menu"
+>
+  ⋮
+</button>
+      <h2 className="brand-title">OFFICE TRACK</h2>
+<p className="brand-subtitle">ATTENDANCE MANAGEMENT SYSTEM</p>
       <p className="muted">ATTENDANCE MANAGEMENT</p>
       {menu.map(item => {
         const Icon = item.icon;
@@ -548,29 +811,87 @@ function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
 </button>
         <p className="muted">Manage your office attendance workspace.</p>
 
-        {page === "Dashboard" && <>
-          <div className="stats">
-            <article><p>Active Employees</p><h2>{active.length}</h2></article>
-            <article><p>Present Today</p><h2>â€”</h2><small>Attendance setup pending</small></article>
-            <article><p>Late Arrivals</p><h2>â€”</h2></article>
-            <article><p>Payroll</p><h2>Setup</h2></article>
-          </div>
-          <article className="panel">
-            <h2>Office Shifts</h2>
-            <div className="shifts">{shifts.map(s =>
-              <div className="shift" key={s.name}>
-                <strong>{s.name}</strong><p>{s.time}</p><span>{s.hours}</span>
-              </div>
-            )}</div>
-          </article>
-          <article className="panel">
-            <h2>Getting Started</h2>
-            <button className="primary" onClick={() => {
-              setPage("Employees"); openForm();
-            }}><Plus size={17}/> Add First Employee</button>
-          </article>
-        </>}
-
+        {page === "Dashboard" && (() => {
+          const today = new Date();
+          const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+          const todayRecords = attendance.filter(record => record.date === todayKey);
+          const presentToday = todayRecords.filter(record => record.status === "Present").length;
+          const leaveToday = todayRecords.filter(record => record.status === "Leave").length;
+          const absentToday = todayRecords.filter(record => record.status === "Absent").length;
+          const recentRecords = [...attendance]
+            .sort((a, b) => `${b.date} ${b.inTime}`.localeCompare(`${a.date} ${a.inTime}`))
+            .slice(0, 6);
+          const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+            const day = new Date();
+            day.setDate(day.getDate() - (6 - index));
+            const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+            return {
+              key,
+              label: day.toLocaleDateString("en", { weekday: "short" }),
+              count: attendance.filter(record => record.date === key && record.status === "Present").length
+            };
+          });
+          const maxDaily = Math.max(1, ...lastSevenDays.map(day => day.count));
+          const shiftCounts = shifts.map(shift => ({
+            ...shift,
+            count: active.filter(employee => employee.shift === shift.name).length
+          }));
+          return <>
+            <div className="dashboard-welcome">
+              <div><h2>Welcome to OfficeTrack</h2><p>Your office attendance at a glance.</p></div>
+              <button className="primary" onClick={() => setPage("Daily Attendance")}><CalendarCheck size={17}/> Mark Attendance</button>
+            </div>
+            <div className="dashboard-stats">
+              <article className="dashboard-stat"><span className="dashboard-stat-icon blue"><Users size={21}/></span><div><p>Total Employees</p><h2>{active.length}</h2><small>Active employees</small></div></article>
+              <article className="dashboard-stat"><span className="dashboard-stat-icon green"><CalendarCheck size={21}/></span><div><p>Present Today</p><h2>{presentToday}</h2><small>Attendance marked today</small></div></article>
+              <article className="dashboard-stat"><span className="dashboard-stat-icon amber"><Clock size={21}/></span><div><p>On Leave</p><h2>{leaveToday}</h2><small>Leave records today</small></div></article>
+              <article className="dashboard-stat"><span className="dashboard-stat-icon red"><UserX size={21}/></span><div><p>Absent Today</p><h2>{absentToday}</h2><small>Absent records today</small></div></article>
+            </div>
+            <div className="dashboard-grid">
+              <article className="panel dashboard-chart-panel">
+                <div className="dashboard-panel-heading"><div><h2>Attendance Overview</h2><p>Present employees · Last 7 days</p></div><span className="dashboard-legend"><i/> Present</span></div>
+                <div className="attendance-chart">
+                  {lastSevenDays.map(day => <div className="attendance-chart-column" key={day.key}>
+                    <strong>{day.count}</strong><div className="attendance-chart-track"><span style={{ height: `${Math.max(day.count ? 12 : 4, day.count / maxDaily * 100)}%` }}/></div><small>{day.label}</small>
+                  </div>)}
+                </div>
+              </article>
+              <article className="panel dashboard-shifts-panel">
+                <div className="dashboard-panel-heading"><div><h2>Shift Distribution</h2><p>Active employees by shift</p></div></div>
+                <div className="shift-distribution">
+                  {shiftCounts.map((shift, index) => <div className="shift-distribution-row" key={shift.name}>
+                    <div className="shift-distribution-label"><span className={`shift-dot shift-dot-${index}`}/><span>{shift.name}</span><strong>{shift.count}</strong></div>
+                    <div className="shift-distribution-track"><span className={`shift-bar shift-bar-${index}`} style={{ width: `${active.length ? shift.count / active.length * 100 : 0}%` }}/></div>
+                  </div>)}
+                </div>
+                <p className="dashboard-shift-total">{active.length} active employees across {shifts.length} shifts</p>
+              </article>
+            </div>
+            <article className="panel dashboard-recent-panel">
+              <div className="dashboard-panel-heading"><div><h2>Recent Attendance</h2><p>Latest saved attendance records</p></div><button className="dashboard-text-button" onClick={() => setPage("Attendance Sheet")}>View all <span>→</span></button></div>
+              <div className="table-scroll"><table>
+                <thead><tr><th>EMPLOYEE</th><th>DATE</th><th>IN TIME</th><th>OUT TIME</th><th>STATUS</th><th>OVERTIME</th></tr></thead>
+                <tbody>
+                  {recentRecords.map(record => {
+                    const employee = employees.find(e => e.id === record.employeeId);
+                    if (!employee) return null;
+                    return <tr key={record.id}>
+                      <td><strong>{employee?.name ?? `EMP-${record.employeeId}`}</strong><small className="dashboard-employee-id">EMP-{record.employeeId}</small></td>
+                      <td>{record.date}</td><td>{record.inTime || "—"}</td><td>{record.outTime || "—"}</td>
+                      <td><span className={`attendance-status status-${record.status.toLowerCase()}`}>{record.status}</span></td>
+                      <td>{Number(record.overtime || 0).toFixed(2)} h</td>
+                    </tr>;
+                  })}
+                  {recentRecords.length === 0 && <tr><td colSpan={6} className="dashboard-empty">Abhi attendance records nahi hain. Daily Attendance mein ja kar pehli entry save karein.</td></tr>}
+                </tbody>
+              </table></div>
+            </article>
+            <article className="panel dashboard-office-shifts">
+              <div className="dashboard-panel-heading"><div><h2>Office Shifts</h2><p>Configured shift timings</p></div><button className="dashboard-text-button" onClick={() => setPage("Shift Management")}>Manage shifts →</button></div>
+              <div className="shifts">{shifts.map(s => <div className="shift" key={s.name}><strong>{s.name}</strong><p>{s.time}</p><span>{s.hours}</span></div>)}</div>
+            </article>
+          </>;
+        })()}
         {page === "Employees" && <>
           <div className="toolbar">
             <label className="search"><Search size={17}/>
@@ -590,7 +911,7 @@ function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
                 <td>{e.salary.toLocaleString()}</td>
                 <td className="actions">
                   <button title="Edit" onClick={() => openForm(e)}><Pencil size={16}/></button>
-                  <button title="Deactivate" onClick={() => deactivate(e)}><UserX size={16}/></button>
+                  <button title="Permanently Delete" onClick={() => deactivate(e)}><UserX size={16}/></button>
                 </td>
               </tr>)}
               {visible.length === 0 && <tr><td colSpan={5}>No employees yet. Click Add Employee to begin.</td></tr>}
@@ -853,4 +1174,5 @@ function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
       </div>
     </form></div>}
   </div>;
+  
 }
