@@ -1318,3 +1318,155 @@ td {
   }
 }
 
+
+/* OfficeTrack Admin Login Design */
+.admin-login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top left, #dbeafe, transparent 45%),
+    linear-gradient(135deg, #f8fafc, #eaf1fb);
+  font-family: Inter, Arial, sans-serif;
+  color: #172033;
+}
+
+.admin-login-layout {
+  width: 100%;
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 40px;
+  align-items: center;
+}
+
+.admin-login-intro h1 {
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.15;
+  margin: 0 0 16px;
+  font-weight: 800;
+}
+
+.admin-login-intro p {
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.admin-login-features {
+  margin-top: 28px;
+  display: grid;
+  gap: 16px;
+}
+
+.admin-login-feature {
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  color: #334155;
+}
+
+.admin-login-card {
+  background: #ffffff;
+  padding: 34px;
+  border-radius: 22px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 22px 60px rgba(30, 64, 175, 0.12);
+}
+
+.admin-login-card h2 {
+  margin: 0 0 8px;
+  font-size: 27px;
+  color: #172033;
+}
+
+.admin-login-card .admin-login-subtitle {
+  margin: 0 0 26px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.admin-login-card form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-login-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.admin-login-card input {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+  outline: none;
+}
+
+.admin-login-card input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.admin-login-card button {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-login-card button:hover {
+  background: #1d4ed8;
+}
+
+.admin-login-card button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-login-error {
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.admin-login-footer {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+@media (max-width: 760px) {
+  .admin-login-page {
+    padding: 20px;
+  }
+
+  .admin-login-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .admin-login-intro h1 {
+    font-size: 32px;
+  }
+
+  .admin-login-card {
+    padding: 25px;
+  }
+}

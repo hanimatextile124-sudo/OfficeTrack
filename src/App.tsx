@@ -741,34 +741,85 @@ async function saveAttendance(event: React.FormEvent<HTMLFormElement>) {
     return <div className="content"><p>OfficeTrack login check ho raha hai...</p></div>;
   }
 
-  if (!adminUid || adminUserId !== adminUid) {
-    return (
-      <div className="app">
-        <main style={{ maxWidth: 440, margin: "10vh auto", padding: 24, width: "100%" }}>
-          <section className="panel">
-            <h1>OfficeTrack Admin Login</h1>
-            <p className="muted">Apne authorized Admin account se login karein.</p>
-            <form onSubmit={handleAdminLogin} className="attendance-form">
-              <label>
-                Admin Email
-                <input type="email" required autoComplete="username"
-                  value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
-              </label>
-              <label>
-                Password
-                <input type="password" required autoComplete="current-password"
-                  value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
-              </label>
-              {loginError && <p role="alert">{loginError}</p>}
-              <button className="primary" type="submit" disabled={loginBusy}>
-                {loginBusy ? "Logging in..." : "Admin Login"}
-              </button>
-            </form>
-          </section>
-        </main>
+  
+if (!adminUid || adminUserId !== adminUid) {
+  return (
+    <div className="admin-login-page">
+      <div className="admin-login-layout">
+        <section className="admin-login-intro">
+          <p>OFFICE TRACK · ADMIN PORTAL</p>
+          <h1>Smart Attendance Management</h1>
+          <p>
+            Apne office ki attendance, employees, shifts aur salary
+            records ko ek hi jagah manage karein.
+          </p>
+
+          <div className="admin-login-features">
+            <div className="admin-login-feature">
+              <strong>01 · Employee Management</strong>
+              <p>Employee records ko asani se manage karein.</p>
+            </div>
+            <div className="admin-login-feature">
+              <strong>02 · Daily Attendance</strong>
+              <p>Daily attendance aur working hours ka record rakhein.</p>
+            </div>
+            <div className="admin-login-feature">
+              <strong>03 · Salary Reports</strong>
+              <p>Monthly salary aur attendance reports dekhein.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="admin-login-card">
+          <h2>Welcome Back!</h2>
+          <p className="admin-login-subtitle">
+            Apne authorized Admin account se login karein.
+          </p>
+
+          <form onSubmit={handleAdminLogin}>
+            <label>
+              Admin Email
+              <input
+                type="email"
+                required
+                autoComplete="username"
+                placeholder="Enter admin email"
+                value={loginEmail}
+                onChange={e => setLoginEmail(e.target.value)}
+              />
+            </label>
+
+            <label>
+              Password
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="Enter password"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+              />
+            </label>
+
+            {loginError && (
+              <p className="admin-login-error" role="alert">
+                {loginError}
+              </p>
+            )}
+
+            <button type="submit" disabled={loginBusy}>
+              {loginBusy ? "Logging in..." : "Secure Admin Login"}
+            </button>
+          </form>
+
+          <p className="admin-login-footer">
+            OfficeTrack · Authorized access only
+          </p>
+        </section>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return <div className="app">
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
